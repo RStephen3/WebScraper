@@ -6,9 +6,6 @@ import pandas as pd
 import smtplib
 # Import the email modules we'll need 
 from email.mime.text import MIMEText
-# import sys
-# sys.path.insert(0, '..')
-# from secret import config
 import config
 import pathlib
 from selenium.common.exceptions import NoSuchElementException
