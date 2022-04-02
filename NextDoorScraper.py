@@ -17,9 +17,11 @@ def main():
     chrome_options = Options()
     chrome_options.add_argument(f"user-data-dir={scriptDirectory}\\userdata") 
 
+    # Setup selenium driver
     driver = webdriver.Chrome(executable_path=config.chrome_path, chrome_options=chrome_options)
     driver.get(search_query)
 
+    # Check if we are on the sign-in page
     if (check_if_need_login(driver, "signin_button")):
         username = driver.find_element_by_id("id_email")
         password = driver.find_element_by_id("id_password")
@@ -28,8 +30,10 @@ def main():
 
         driver.find_element_by_id("signin_button").click()
     
+    # Give the page time to load before scraping
     time.sleep(5)
 
+    #We want this to always run
     while True == True:
         item_list = driver.find_elements_by_xpath("//a[@class='fsf-item-detail-link classified-item-card-container']")
 
@@ -40,7 +44,7 @@ def main():
             item_timelocation = each_item.find_elements_by_xpath(".//div[@class='classified-item-card-subline']")[0]
             # Saving job info 
             item_info = [item_name.text, item_timelocation.text]
-            # Save into job_details if new item
+            # Calculate if item is new 
             item_time = item_timelocation.text.split("ago")[0]
             if "hr" in item_time:
                 item_min = item_time.split()[0]
@@ -51,11 +55,13 @@ def main():
             else:
                 item_min = item_time.split()[0]
 
+            # If item is less than 15min old, add to our list to include in email
             if (int(item_min) < 15):
                 item_details_list.append(item_info)
 
         driver.quit()
 
+        # Create email body with list of items
         msg_body = ''
         for item_details in item_details_list:
             msg_body += """  
@@ -65,6 +71,7 @@ def main():
             Updated 
             """ + item_details[1]
 
+        # If we added any new items, then we want to send an email
         if (len(msg_body) > 0):
             msg = MIMEText(msg_body)
             sender = config.email_sender
@@ -73,12 +80,14 @@ def main():
             msg['From'] = sender
             msg['To'] = to
 
+            # Setup server with required info and send email
             server = smtplib.SMTP(config.smtp_address)
             server.starttls()
             server.login(sender, config.email_web_app_password)
             server.sendmail(sender, [to], msg.as_string())
             server.quit()
         
+        # Sleep for 15 minutes and do it all again
         time.sleep(900)
         driver = webdriver.Chrome(executable_path=config.chrome_path, chrome_options=chrome_options)
         driver.get(search_query)
